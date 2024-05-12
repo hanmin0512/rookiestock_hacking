@@ -238,6 +238,95 @@ echo "
 > <img width="454" alt="image" src="https://github.com/hanmin0512/rookiestock_hacking/assets/37041208/3d3cef79-a7c2-4b03-9996-5a774b096c81">
 
 
+## 악성 앱 배포를 통한 모바일 탈취 시나리오
+- 악성 앱 배포를 통한 모바일 탈취 시나리오는 SQL Injection 취약점을 활용한 시나리오이다. SQL Injection 취약점은 악의적인 SQL 코드가 실행되게 함으로써 데이터베이스 시스템을 조작하는 보안 취약점이다. 이 취약점을 통해 공격자는 데이터베이스에서 데이터를 조회, 삭제, 수정할 수 있으며 궁극적으로는 전체 시스템에 대한 제어권을 획득할 수도 있다.
+
+### 1차 정보 수집
+- 루키증권 웹사이트의 종목 검색 기능에서 SQL Injection 취약점을 확인한다. 참인 쿼리를 넣었을 때는 검색 결과가 정상적으로 나오는 것을 확인할 수 있다.
+
+| 입력 구문 (참) |
+|---------|
+| a%’ and 1=1 and ‘%1%’=’%1 |
+
+> <img width="257" alt="image" src="https://github.com/hanmin0512/rookiestock_hacking/assets/37041208/b35f7613-1fa5-4cf9-85ec-061d500c4e9b">
+
+<br>
+<br>
+
+- 거짓인 쿼리를 넣었을 때는 검색 결과가 없는 것을 보아 Blind SQL Injection에 취약한 것을 알 수 있다.
+| 입력 구문 (거짓) |
+|---------|
+| a%’ and 1=1 and ‘%1%’=’%2 |
+
+> <img width="257" alt="image" src="https://github.com/hanmin0512/rookiestock_hacking/assets/37041208/69634c34-5f65-46ca-9bc1-bdaa0d58445e">
+
+### DB 내 정보 탈취
+- 루키증권 웹사이트의 종목 검색 기능에 Blind SQL Injection 자동화 스크립트를 적용하여 DB 내 테이블 정보를 탈취하고 Users 테이블에 대한 컬럼을 탈취한다.
+
+> <img width="456" alt="image" src="https://github.com/hanmin0512/rookiestock_hacking/assets/37041208/fdffdf3e-6503-4a60-90e1-9ea723c43d18">
+
+> <img width="257" alt="image" src="https://github.com/hanmin0512/rookiestock_hacking/assets/37041208/a3dd14d1-b71d-499d-9fae-212964515af6">
+
+- 그리고 테이블 내 전체 데이터를 탈취한다. 그 결과 ACCESS_LEVEL 값이 1인 관리자(admin) 계정이 존재한다는 것을 확인할 수 있다. 그리고 탈취한 전체 데이터를 엑셀 파일로 저장한다.
+
+> <img width="456" alt="image" src="https://github.com/hanmin0512/rookiestock_hacking/assets/37041208/66ae5889-2ff3-4503-8bda-86ace0e5ad74">
+
+- 여기서 USER_ID와 USER_PW를 추출해서 패스워드 파일 형태로 저장한다.
+
+> <img width="455" alt="image" src="https://github.com/hanmin0512/rookiestock_hacking/assets/37041208/cbd53303-5199-45d5-97b2-82395d94d581">
+
+
+### 관리자 계정 접근
+- 탈취한 데이터 중 비밀번호는 SHA256으로 단방향 암호화되어 있으므로, 레인보우 테이블을 기반으로 한 패스워드 크래킹을 진행하여 비밀번호를 복호화 한다.
+
+> <img width="456" alt="image" src="https://github.com/hanmin0512/rookiestock_hacking/assets/37041208/e406f6c3-7928-4817-a794-507f2cbcab7f">
+
+- SHA256 형식을 지정하고 패스워드 크래킹을 진행한 결과 관리자 계정의 비밀번호가 admin임을 확인할 수 있다. 크래킹 된 패스워드를 파일로 저장한다.
+
+> <img width="456" alt="image" src="https://github.com/hanmin0512/rookiestock_hacking/assets/37041208/4edecef3-333d-4530-978f-99e976f8179d">
+
+- 패스워드 크래킹 결과로 관리자 계정 ID 와 패스워드를 알아냈다. 이걸 이용하여 관리자 계정으로 로그인을 한다.
+
+### 악성 공지사항 작성
+
+- 관리자 계정을 이용하여 악성 앱 다운로드를 유도하는 공지사항을 작성한다. 공지사항 작성 페이지에서 프록시 도구를 활용하여 파일 확장자를 검사하는 자바스크립트 코드를 변조한다.
+
+> <img width="456" alt="image" src="https://github.com/hanmin0512/rookiestock_hacking/assets/37041208/066f8e0a-4e9e-4afd-82bf-56dba78ec177">
+
+- 화이트박스 기반 필터링 리스트에 apk 확장자를 추가하여 확장자 필터링을 우회한다.
+
+> <img width="257" alt="image" src="https://github.com/hanmin0512/rookiestock_hacking/assets/37041208/f77733bd-4c39-4d81-8f8c-9784cc1ed712">
+
+- 그리고 악성 앱과 함께 공지사항 글을 작성하여 게시해서 사용자들이 링크된 악성 앱을 다운로드하게 한다.
+
+### 중요 정보 탈취
+
+- 사용자가 공지사항에서 악성 앱을 다운로드 받아 설치한다.
+
+> <img width="257" alt="image" src="https://github.com/hanmin0512/rookiestock_hacking/assets/37041208/6f006475-df3c-4d59-b51b-b25a401928b5">
+> <img width="257" alt="image" src="https://github.com/hanmin0512/rookiestock_hacking/assets/37041208/1fe75373-65f7-4545-8242-90409e4b8018">
+
+- 공격자의 컴퓨터에 접속해서 8888포트를 열고 사용자가 악성 앱을 다운로드하고 실행해서 리버스 쉘이 연결되기를 기다린다.
+
+| 입력 구문 |
+|---------|
+| netcat-win32-1.12>nc64.exe -nvlp 8888 |
+
+> <img width="456" alt="image" src="https://github.com/hanmin0512/rookiestock_hacking/assets/37041208/7f2d8d98-725c-47c6-b1e8-a181a7588b02">
+
+
+- 사용자가 앱을 실행하면 공격자 서버와 연결이 되면서 휴대폰의 쉘을 획득할 수 있다.
+
+> <img width="456" alt="image" src="https://github.com/hanmin0512/rookiestock_hacking/assets/37041208/7176ceea-f08f-4a6d-bd1c-d2b944111ea7">
+
+- 피해자 휴대폰의 내장 메모리에 접근한 뒤 탈취하고 싶은 데이터가 있는 위치로 이동한다.
+
+| 입력 구문 |
+|---------|
+| cd /storage/emulated/O/DCIM |
+
+
+
 
 
 
